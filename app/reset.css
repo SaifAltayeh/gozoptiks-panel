@@ -1,0 +1,11 @@
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: system-ui, sans-serif;
+  background: #f4f5f7;
+  color: #111;
+}
