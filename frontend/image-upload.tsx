@@ -3,14 +3,39 @@
 import { useState } from "react";
 
 const accept = "image/jpeg,image/png,image/webp,image/gif,image/avif";
+const allowed = new Set(["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"]);
 
-async function uploadFile(file: File) {
-  const body = new FormData();
-  body.append("file", file);
-  const response = await fetch("/api/admin/upload", { method: "POST", body });
-  const data = (await response.json()) as { url?: string; error?: string };
-  if (!response.ok || !data.url) throw new Error(data.error || "Upload failed.");
-  return data.url;
+async function fileToImageUrl(file: File): Promise<string> {
+  if (!allowed.has(file.type) && !file.type.startsWith("image/")) {
+    throw new Error("Use a JPG, PNG, WEBP, GIF, or AVIF image.");
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    throw new Error("Image must be under 10MB.");
+  }
+
+  try {
+    const bitmap = await createImageBitmap(file);
+    const max = 1920;
+    const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
+    const width = Math.max(1, Math.round(bitmap.width * scale));
+    const height = Math.max(1, Math.round(bitmap.height * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Could not read that photo.");
+    context.drawImage(bitmap, 0, 0, width, height);
+    bitmap.close();
+    const png = file.type === "image/png" || file.type === "image/gif";
+    return canvas.toDataURL(png ? "image/png" : "image/jpeg", 0.84);
+  } catch {
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(new Error("Could not read that photo."));
+      reader.readAsDataURL(file);
+    });
+  }
 }
 
 function UploadIcon() {
@@ -40,7 +65,7 @@ export function ImageUpload({
     setBusy(true);
     setError("");
     try {
-      onChange(await uploadFile(file));
+      onChange(await fileToImageUrl(file));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not add that photo.");
     } finally {
@@ -109,7 +134,7 @@ export function ImageGalleryUpload({
     setError("");
     try {
       const uploaded: string[] = [];
-      for (const file of list) uploaded.push(await uploadFile(file));
+      for (const file of list) uploaded.push(await fileToImageUrl(file));
       onChange([...value, ...uploaded]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not add those photos.");
@@ -124,7 +149,7 @@ export function ImageGalleryUpload({
       {value.length ? (
         <div className="admin-upload-grid">
           {value.map((url) => (
-            <div className="admin-upload-tile" key={url}>
+            <div className="admin-upload-tile" key={url.slice(0, 48)}>
               <img src={url} alt="" />
               <button type="button" onClick={() => onChange(value.filter((item) => item !== url))} aria-label="Remove photo">
                 Remove
