@@ -134,7 +134,6 @@ function LocaleFields({
             <textarea
               value={value.paragraphsText}
               onChange={(event) => onChange({ ...value, paragraphsText: event.target.value })}
-              style={{ minHeight: "14rem" }}
             />
           </label>
         </div>

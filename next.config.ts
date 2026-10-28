@@ -7,7 +7,6 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   async rewrites() {
     return [
-      { source: "/api/:path*", destination: `${API_URL}/api/:path*` },
       { source: "/uploads/:path*", destination: `${API_URL}/uploads/:path*` },
       { source: "/images/:path*", destination: `${SHOP_URL}/images/:path*` },
       { source: "/fonts/:path*", destination: `${SHOP_URL}/fonts/:path*` },
